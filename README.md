@@ -10,7 +10,7 @@ Puts a username and password in front of any site or private Railway service.
 | `BASIC_AUTH` | `admin:long-password` | One or more `user:password` pairs, comma separated |
 | `ALLOW_NO_AUTH` | `true` | Optional: run without a login |
 
-Listens on `$PORT` (default `80`). `/healthz` answers without a login for health checks.
+Listens on port `80` (change with `PROXY_PORT`); point the domain there. `/healthz` answers without a login for health checks.
 
 ## License
 

@@ -11,7 +11,8 @@ fi
 ORIGIN="${ORIGIN%/}"
 export ORIGIN
 
-export PROXY_PORT="${PORT:-80}"
+# Railway sets PORT for every service; this proxy always listens on 80 (or PROXY_PORT).
+export PROXY_PORT="${PROXY_PORT:-80}"
 
 # nginx needs an explicit resolver when the upstream is a variable.
 ns=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf)
