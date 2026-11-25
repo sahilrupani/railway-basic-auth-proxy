@@ -1,0 +1,39 @@
+#!/bin/sh
+# Sourced by nginx's entrypoint before templates are rendered.
+#   ORIGIN      where to send requests, e.g. https://example.com or http://app.railway.internal:3000
+#   BASIC_AUTH  one or more user:password pairs separated by commas
+#   ALLOW_NO_AUTH=true   run without a login (not recommended)
+
+if [ -z "${ORIGIN:-}" ]; then
+    echo "[proxy] ORIGIN is not set; set it to the URL you want to protect." >&2
+    exit 1
+fi
+ORIGIN="${ORIGIN%/}"
+export ORIGIN
+
+export PROXY_PORT="${PORT:-80}"
+
+# nginx needs an explicit resolver when the upstream is a variable.
+ns=$(awk '/^nameserver/ {print $2; exit}' /etc/resolv.conf)
+case "$ns" in
+    *:*) ns="[$ns]" ;;
+    "") ns="1.1.1.1" ;;
+esac
+export PROXY_RESOLVER="$ns"
+
+: > /etc/nginx/.htpasswd
+if [ -n "${BASIC_AUTH:-}" ]; then
+    echo "$BASIC_AUTH" | tr ',' '\n' | while IFS= read -r pair; do
+        [ -z "$pair" ] && continue
+        user="${pair%%:*}"
+        pass="${pair#*:}"
+        printf '%s:%s\n' "$user" "$(openssl passwd -apr1 "$pass")" >> /etc/nginx/.htpasswd
+    done
+    export PROXY_AUTH='auth_basic "Restricted"; auth_basic_user_file /etc/nginx/.htpasswd;'
+elif [ "${ALLOW_NO_AUTH:-false}" = "true" ]; then
+    echo "[proxy] ALLOW_NO_AUTH=true: running WITHOUT a login." >&2
+    export PROXY_AUTH=''
+else
+    echo "[proxy] BASIC_AUTH is not set (format user:password). Refusing to start without a login." >&2
+    exit 1
+fi
